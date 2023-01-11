@@ -4,13 +4,9 @@ namespace App
 {
     public class LookTrigger : MonoBehaviour
     {
-        [SerializeField] private float _triggerLookSensitivity = .9f; // trigger sensitivity value
-        [SerializeField] private float _rangeOfInteraction = 4f; // distance at which triggers became interactable
-
         private ColorChanger _colorChanger;
         private Transform _playerCameraTransform;
 
-        private bool _canInteract; // true when the sphere is triggered
         private bool _switched; // controls repetitive invocation of ColorChanger
 
         private void Start()
@@ -27,27 +23,42 @@ namespace App
 
         private void Trigger()
         {
-            // get vector from player to the target sphere
-            var playerToTarget = transform.position - _playerCameraTransform.position;
-            // make it a direction by normalizing it
-            var playerToTargetDir = playerToTarget.normalized;
-            // get dot product of playerToTargetDir and forward camera vector direction 
-            var lookAmount = Vector3.Dot(playerToTargetDir, _playerCameraTransform.forward);
+            // cache to avoid repeated properties access
+            var trans = transform;
+            var pos = trans.position;
+            var pCamPos = _playerCameraTransform.position;
 
-            // figure if it's close enough to be able to trigger the sphere
-            var isClose = playerToTarget.magnitude < _rangeOfInteraction;
-            // figure if player sufficiently looks in the direction of the sphere
-            var canSee = lookAmount > _triggerLookSensitivity;
-            _canInteract = isClose && canSee;
+            // let's assume that spheres are uniformly scaled so we can use any scale axis
+            var targetScale = .5f * trans.localScale.x;
+            // gets vector from player cam to the target sphere
+            var pCamToTarget = pos - pCamPos;
+            // makes it a direction by normalizing it
+            var pCamToTargetDir = pCamToTarget.normalized;
+            // gets a perpendicular direction by crossing it with a downwards pointing vector and normalizing it
+            var parallelDir = Vector3.Cross(pCamToTarget, -Vector3.up).normalized;
+            // scales it with the sphere local scale
+            var parallelScaled = parallelDir * targetScale;
+            // moves parallel vector to the target sphere position touching it's surface on the right relative to the player cam;
+            var targetRight = parallelScaled + pos;
+            // gets a direction from player cam to targetRight
+            var pToRight = (targetRight - pCamPos).normalized;
+            // forward direction of player cam
+            var camFaceDir = _playerCameraTransform.forward;
+
+            var dotTgtEdge = Vector3.Dot(pCamToTargetDir, pToRight);
+            var dotTgtFace = Vector3.Dot(pCamToTargetDir, camFaceDir);
+            // if dot product of vector from player cam to camera forward facing direction is larger than
+            // dot product of vector from player cam to the right edge of the target sphere, than player looks at the target
+            var looksAt = dotTgtFace > dotTgtEdge;
 
             // turned towards target, invoking OnColorSwitch once
-            if (_canInteract && !_switched)
+            if (looksAt && !_switched)
             {
                 _colorChanger.OnColorSwitch?.Invoke();
                 _switched = true;
             }
             // turning away, invoking OnColorSwitch once
-            else if (!_canInteract && _switched)
+            else if (!looksAt && _switched)
             {
                 _colorChanger.OnColorSwitch?.Invoke();
                 _switched = false;
