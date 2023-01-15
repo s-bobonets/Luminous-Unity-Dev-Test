@@ -21,7 +21,7 @@ namespace App
         {
             // grab components
             _inputManager = InputManager.Instance;
-            _playerCamera = GameObject.Find("Player Camera").GetComponent<Camera>();
+            _playerCamera = GameObject.FindWithTag("MainCamera").GetComponent<Camera>();
 
             LockCursor();
         }

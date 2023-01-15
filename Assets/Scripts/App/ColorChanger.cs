@@ -18,7 +18,7 @@ namespace App
 
         private void Start()
         {
-            // cache in mesh rendered and original color in the fields
+            // cache in mesh renderer and original color in the fields
             _meshRenderer = GetComponent<MeshRenderer>();
             _originalColor = _meshRenderer.material.color;
         }
